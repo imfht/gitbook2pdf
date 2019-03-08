@@ -1,14 +1,18 @@
-import html
-import requests
 import asyncio
-import aiohttp
-import weasyprint
 import datetime
+import html
+import os
 import re
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
-from lxml import etree as ET
 import sys
+from urllib.parse import urljoin, urlparse
+
+import aiohttp
+import requests
+import weasyprint
+from bs4 import BeautifulSoup
+from lxml import etree as ET
+
+currnet_file = os.path.dirname(os.path.abspath(__file__))  # it works!
 
 
 async def request(url, headers, timeout=None):
@@ -18,13 +22,13 @@ async def request(url, headers, timeout=None):
 
 
 def local_ua_stylesheets(self):
-    return [weasyprint.CSS('./html5_ua.css')]
+    return [weasyprint.CSS(currnet_file + '/html5_ua.css')]
 
 
 # weasyprint's monkey patch for level
 
 def load_gitbook_css():
-    with open('gitbook.css', 'r') as f:
+    with open(currnet_file + '/gitbook.css', 'r') as f:
         return f.read()
 
 
@@ -187,9 +191,10 @@ class Gitbook2PDF():
         content_urls = self.collect_urls_and_metadata(self.base_url)
         self.content_list = ["" for _ in range(len(content_urls))]
         loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
         loop.run_until_complete(self.crawl_main_content(content_urls))
         loop.close()
-
         # main body
         body = "".join(self.content_list)
         # 使用HtmlGenerator类来生成HTML
@@ -201,6 +206,7 @@ class Gitbook2PDF():
         css_text = load_gitbook_css()
 
         self.write_pdf(self.fname, html_text, css_text)
+        return currnet_file + "/output/" + self.fname
 
     async def crawl_main_content(self, content_urls):
         tasks = []
@@ -239,7 +245,7 @@ class Gitbook2PDF():
     def write_pdf(self, fname, html_text, css_text):
         tmphtml = weasyprint.HTML(string=html_text)
         tmpcss = weasyprint.CSS(string=css_text)
-        fname = "./output/" + fname
+        fname = currnet_file + "/output/" + fname
         htmlname = fname.replace('.pdf', '.html')
         with open(htmlname, 'w', encoding='utf-8') as f:
             f.write(html_text)
